@@ -3,16 +3,21 @@
 #----------------------------------------------------------------------------#
 
 import json
+from tkinter import CASCADE
 import dateutil.parser
 import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for
 from flask_moment import Moment
+from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import UniqueConstraint, distinct
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
-from flask_migrate import Migrate
 from forms import *
+from datetime import datetime
+from flask.json import jsonify
+from sqlalchemy.exc import SQLAlchemyError
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -40,7 +45,30 @@ class Venue(db.Model):
     phone = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
+    genres = db.Column(db.ARRAY(db.String(120)))
+    shows = db.relationship('Show', backref='Venue', lazy=True, cascade='all, delete-orphan')
+    talent = db.Column(db.Boolean, default=False)
+    description = db.Column(db.String(800))
+    website = db.Column(db.String(120))
+    UniqueConstraint('name', 'city', 'state', 'address', name='unique_name_city_state_address')
+    
+    @property
+    def upcoming_shows(self):
+          upcoming_shows = [show for show in self.shows if show.start_time > datetime.now()]
+          return upcoming_shows
+    @property 
+    def num_upcoming_shows(self):
+        return len(self.upcoming_shows)
+    
+    @property
+    def past_shows(self):
+        past_shows = [show for show in self.shows if show.start_time < datetime.now()]
+        return past_shows
 
+    @property
+    def num_past_shows(self):
+        return len(self.past_shows)
+        
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 
 class Artist(db.Model):
@@ -54,6 +82,36 @@ class Artist(db.Model):
     genres = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
+    website_link = db.Column(db.String(500))
+    venue = db.Column(db.Boolean, default=False, nullable=False)
+    description = db.Column(db.String(500), nullable=True)
+    shows = db.relationship('Show', backref='Artist', lazy=True)
+    
+    @property
+    def upcoming_shows(self):
+      upcoming_shows = [show for show in self.shows if show.start_time > datetime.now()]
+      return upcoming_shows
+      
+    @property
+    def num_upcoming_shows(self):      
+      return len(self.upcoming_shows)
+        
+    @property
+    def past_shows(self):
+      past_shows = [show for show in self.shows if show.start_time < datetime.now()]
+      return past_shows
+      
+    @property
+    def num_past_shows(self):
+      return len(self.past_shows)
+    
+class Show(db.Model):
+      __tablename__ = 'Show'
+
+      id = db.Column(db.Integer, primary_key=True)
+      start_time = db.Column(db.DateTime, nullable=False)
+      artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), nullable=False)
+      venue_id = db.column(db.Integer, db.ForeignKey('Venue.id'))
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 
@@ -79,7 +137,7 @@ app.jinja_env.filters['datetime'] = format_datetime
 
 @app.route('/')
 def index():
-  return render_template('pages/home.html')
+  return render_template('pages/home.html', data=Artist.query.all())
 
 
 #  Venues
