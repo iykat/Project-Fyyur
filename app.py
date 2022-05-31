@@ -47,8 +47,8 @@ class Venue(db.Model):
     facebook_link = db.Column(db.String(120))
     genres = db.Column(db.ARRAY(db.String(120)))
     shows = db.relationship('Show', backref='Venue', lazy=True, cascade='all, delete-orphan')
-    talent = db.Column(db.Boolean, default=False)
-    description = db.Column(db.String(800))
+    seeking_talent = db.Column(db.Boolean, default=False)
+    seeking_description = db.Column(db.String(800))
     website = db.Column(db.String(120))
     UniqueConstraint('name', 'city', 'state', 'address', name='unique_name_city_state_address')
     
@@ -83,8 +83,8 @@ class Artist(db.Model):
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
     website_link = db.Column(db.String(500))
-    venue = db.Column(db.Boolean, default=False, nullable=False)
-    description = db.Column(db.String(500), nullable=True)
+    seeking_venue = db.Column(db.Boolean, default=False, nullable=False)
+    seeking_description = db.Column(db.String(500), nullable=True)
     shows = db.relationship('Show', backref='Artist', lazy=True)
     
     @property
